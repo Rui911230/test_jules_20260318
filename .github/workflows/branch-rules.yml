@@ -26,6 +26,16 @@ jobs:
       - name: Check PR to dev
         if: github.base_ref == 'dev'
         run: |
+          if [ "${{ github.head_ref }}" = "main" ]; then
+            echo "PR from main to dev is allowed for syncing."
+            exit 0
+          fi
+
+          if [[ "${{ github.head_ref }}" == hotfix/* ]]; then
+            echo "PR from hotfix branch to dev is allowed."
+            exit 0
+          fi
+
           if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
             echo "main branch does not exist yet. Allowing PR."
             exit 0
