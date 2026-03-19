@@ -18,8 +18,8 @@ jobs:
       - name: Check PR to main
         if: github.base_ref == 'main'
         run: |
-          if [ "${{ github.head_ref }}" != "dev" ]; then
-            echo "::error::PRs to main are only allowed from the 'dev' branch."
+          if [[ "${{ github.head_ref }}" != "dev" && "${{ github.head_ref }}" != dev-* ]]; then
+            echo "::error::PRs to main are only allowed from the 'dev' branch (or branches starting with 'dev-')."
             exit 1
           fi
 
@@ -39,25 +39,11 @@ jobs:
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
           BASE_WITH_MAIN=$(git merge-base origin/main $HEAD_SHA)
-          BASE_WITH_DEV=$(git merge-base origin/dev $HEAD_SHA)
 
-          MAIN_SHA=$(git rev-parse origin/main)
-          DEV_SHA=$(git rev-parse origin/dev)
-
-          echo "Main SHA: $MAIN_SHA"
-          echo "Dev SHA: $DEV_SHA"
-          echo "Merge base with Main: $BASE_WITH_MAIN"
-          echo "Merge base with Dev: $BASE_WITH_DEV"
-
-          if [ "$MAIN_SHA" = "$DEV_SHA" ]; then
-            echo "main and dev branches are at the same commit. Branch origin is ambiguous but valid."
+          if git merge-base --is-ancestor $BASE_WITH_MAIN origin/dev; then
+            echo "Branch appears to be correctly based on 'dev' (or a common ancestor of main and dev)."
             exit 0
-          fi
-
-          if [ "$BASE_WITH_MAIN" = "$BASE_WITH_DEV" ]; then
-            echo "::error::The branch for this PR was created from 'main' instead of 'dev'. New task branches must be created from 'dev'."
+          else
+            echo "::error::The branch for this PR contains commits from 'main' that are not in 'dev'. This indicates it was branched from 'main' instead of 'dev'. New task branches must be created from 'dev'."
             exit 1
           fi
-
-          echo "Branch appears to be correctly based on 'dev'."
-          exit 0
